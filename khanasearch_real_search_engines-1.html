@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KhanaSearch</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:#202124;background:white}
+header{height:62px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+.logo{font-size:27px;font-weight:700;letter-spacing:-1px;color:#4285f4}.logo b{color:#ea4335}.logo i{color:#fbbc05;font-style:normal}.logo em{color:#34a853;font-style:normal}
+nav button{background:none;border:0;color:#5f6368;cursor:pointer;margin-left:10px}
+main{max-width:900px;margin:auto;padding:45px 20px 100px}
+.searchbar{height:52px;border:1px solid #dfe1e5;border-radius:28px;display:flex;align-items:center;padding:0 16px;box-shadow:0 1px 5px #0001}
+.searchbar input{border:0;outline:0;font-size:17px;flex:1}.searchbar button{border:0;background:none;font-size:19px;cursor:pointer}
+.engines{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.engine{border:1px solid #dadce0;background:#fff;padding:8px 14px;border-radius:18px;cursor:pointer}.engine.active{background:#e8f0fe;border-color:#8ab4f8;color:#174ea6}
+.actions{margin:18px 0;display:flex;gap:10px;flex-wrap:wrap}.primary,.addbtn{border:0;background:#1a73e8;color:#fff;border-radius:6px;padding:11px 16px;cursor:pointer}.secondary{border:1px solid #dadce0;background:#f8f9fa;border-radius:6px;padding:11px 16px;cursor:pointer}
+#results{margin-top:30px}.note{color:#70757a;font-size:13px}.result{padding:18px 0;border-bottom:1px solid #eee}.result .source{font-size:13px;color:#188038}.result h3{font-size:20px;font-weight:500;color:#1a0dab;margin:5px 0;cursor:pointer}.result p{color:#4d5156;line-height:1.5;margin:0}.tag{font-size:11px;background:#f1f3f4;border-radius:12px;padding:4px 8px;display:inline-block;margin-top:9px}
+.modal{display:none;position:fixed;inset:0;background:#0007;align-items:center;justify-content:center;padding:18px}.box{background:#fff;width:min(500px,100%);border-radius:16px;padding:24px}.box h2{margin-top:0}.box input,.box textarea{width:100%;padding:12px;margin:7px 0;border:1px solid #dadce0;border-radius:8px;font:inherit}.box textarea{min-height:90px;resize:vertical}.close{float:right;border:0;background:none;font-size:24px;cursor:pointer}.empty{padding:30px 0;color:#70757a}
+footer{position:fixed;bottom:0;width:100%;padding:13px 20px;background:#f2f2f2;border-top:1px solid #ddd;color:#70757a;font-size:12px;text-align:center}
+@media(max-width:600px){main{padding-top:30px}.logo{font-size:23px}header{padding:0 12px}}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">Khana<b>S</b><i>e</i><span style="color:#4285f4">a</span><em>rch</em></div>
+<nav><button onclick="openModal()">＋ Add Result</button><button onclick="clearAll()">Reset</button></nav>
+</header>
+
+<main>
+<div class="searchbar">
+<input id="q" placeholder="Kuch bhi search karein..." autocomplete="off">
+<button onclick="doSearch()">🔍</button>
+</div>
+
+<div class="engines">
+<button class="engine active" data-engine="duck" onclick="setEngine(this)">DuckDuckGo</button>
+<button class="engine" data-engine="google" onclick="setEngine(this)">Google</button>
+<button class="engine" data-engine="bing" onclick="setEngine(this)">Bing</button>
+<button class="engine" data-engine="wiki" onclick="setEngine(this)">Wikipedia</button>
+</div>
+
+<div class="actions">
+<button class="primary" onclick="doSearch()">KhanaSearch</button>
+<button class="secondary" onclick="externalSearch()">🌐 Open selected search engine</button>
+</div>
+
+<section id="results"></section>
+</main>
+
+<div class="modal" id="modal">
+<div class="box">
+<button class="close" onclick="closeModal()">×</button>
+<h2>Add your own result</h2>
+<p style="color:#70757a;font-size:13px">Apni website/result manually add karein. Ye isi browser mein save hoga.</p>
+<input id="mtitle" placeholder="Title">
+<input id="mlink" placeholder="Link (https://...)">
+<textarea id="mdesc" placeholder="Description"></textarea>
+<button class="addbtn" onclick="saveManual()">Save Result</button>
+</div>
+</div>
+
+<footer>KhanaSearch • Personal entertainment search project</footer>
+
+<script>
+let engine=localStorage.getItem("engine")||"duck";
+let manual=JSON.parse(localStorage.getItem("manualResults")||"[]");
+const sample=[
+{title:"Aaj Ka Breakfast",link:"https://khanasearch.local/breakfast",desc:"Subah ke breakfast aur ghar ke menu se related fun information.",tag:"KhanaSearch"},
+{title:"Today's Menu",link:"https://khanasearch.local/menu",desc:"Poha, paratha, chai aur ghar ka special — aaj kitchen mein kya hai?",tag:"KhanaSearch"},
+{title:"Breakfast Mission",link:"https://khanasearch.local/mission",desc:"Subah ka mission: politely poochna, menu samajhna aur breakfast enjoy karna.",tag:"KhanaSearch"}
+];
+
+function setEngine(el){
+ document.querySelectorAll(".engine").forEach(x=>x.classList.remove("active"));
+ el.classList.add("active"); engine=el.dataset.engine;localStorage.setItem("engine",engine);
+}
+function externalUrl(q){
+ q=encodeURIComponent(q);
+ if(engine==="google")return "https://www.google.com/search?q="+q;
+ if(engine==="bing")return "https://www.bing.com/search?q="+q;
+ if(engine==="wiki")return "https://en.wikipedia.org/w/index.php?search="+q;
+ return "https://duckduckgo.com/?q="+q;
+}
+function externalSearch(){
+ const q=document.getElementById("q").value.trim();
+ if(q) window.open(externalUrl(q),"_blank");
+}
+function doSearch(){
+ const q=document.getElementById("q").value.trim().toLowerCase();
+ const all=[...manual,...sample];
+ const found=q?all.filter(x=>(x.title+" "+x.desc).toLowerCase().includes(q)):all;
+ const box=document.getElementById("results");
+ box.innerHTML=`<div class="note">${found.length} local result(s) • Selected engine: ${engine}</div>`;
+ if(!found.length){
+  box.innerHTML+=`<div class="empty">Local result nahi mila.<br><br><button class="primary" onclick="externalSearch()">🌐 Internet par search karein</button></div>`;
+  return;
+ }
+ found.forEach((x,i)=>{
+  const a=document.createElement("article");a.className="result";
+  a.innerHTML=`<div class="source">${escapeHtml(x.link)}</div><h3>${escapeHtml(x.title)}</h3><p>${escapeHtml(x.desc)}</p><span class="tag">${escapeHtml(x.tag||"Manual")}</span>`;
+  a.querySelector("h3").onclick=()=>window.open(x.link,"_blank");
+  box.appendChild(a);
+ });
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function openModal(){modal.style.display="flex";mtitle.focus()}
+function closeModal(){modal.style.display="none"}
+function saveManual(){
+ const title=mtitle.value.trim(),link=mlink.value.trim(),desc=mdesc.value.trim();
+ if(!title||!link){alert("Title aur link zaroori hai.");return}
+ manual.unshift({title,link,desc:desc||"Manually added result",tag:"My Result"});
+ localStorage.setItem("manualResults",JSON.stringify(manual));
+ mtitle.value=mlink.value=mdesc.value="";closeModal();doSearch();
+}
+function clearAll(){
+ if(confirm("Sirf aapke manually added results delete honge. Continue?")){
+  manual=[];localStorage.removeItem("manualResults");doSearch();
+ }
+}
+document.getElementById("q").addEventListener("keydown",e=>{if(e.key==="Enter")doSearch()});
+doSearch();
+</script>
+</body>
+</html>
